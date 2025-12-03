@@ -668,6 +668,15 @@
       .attr("class", "axis axis--y")
       .call(d3.axisLeft(y).ticks(5));
 
+    // Y-axis label
+    g.append("text")
+  .attr("class", "axis-title")
+  .attr("transform", "rotate(-90)")
+  .attr("x", -height / 2)
+  .attr("y", -45)
+  .attr("text-anchor", "middle")
+  .text("Total Wins");
+
     // Mean lines per bin
     const toxicValues = data
       .filter((d) => d.bin === "toxic_troop")
