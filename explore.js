@@ -166,7 +166,7 @@
       .join("option")
       .attr("class", "elixir-option")
       .attr("value", (d) => d)
-      .text((d) => `${d} elixir`);
+      .html((d) => `${d} <img src="images/elixir.webp" class="elixir-icon">`);
 
     // Rarity filter
     const raritySelect = filterRow
