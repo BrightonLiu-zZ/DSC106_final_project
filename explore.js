@@ -159,14 +159,14 @@
       .attr("id", "explorer-elixir-filter")
       .attr("class", "explorer-select explorer-select--small");
 
-    elixirSelect.append("option").attr("value", "").text("");
+    elixirSelect.append("option").attr("value", "").text("Any elixir");
     elixirSelect
       .selectAll("option.elixir-option")
       .data(uniqueElixirs)
       .join("option")
       .attr("class", "elixir-option")
       .attr("value", (d) => d)
-      .text((d) => d);
+      .text((d) => `${d} elixir`);
 
     // Rarity filter
     const raritySelect = filterRow
