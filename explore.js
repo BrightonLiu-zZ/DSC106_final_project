@@ -394,13 +394,13 @@
       if (d.card_type) metaParts.push(d.card_type);
       if (d.rarity) metaParts.push(d.rarity);
       if (d.elixir !== undefined && d.elixir !== null) {
-        metaParts.push(`${d.elixir} elixir`);
+        metaParts.push(`${d.elixir} <img src="images/elixir.webp" class="elixir-icon">`);
       }
 
       info
         .append("div")
         .attr("class", "explorer-search-card-meta")
-        .text(metaParts.join(" · "));
+        .html(metaParts.join(" · "));
 
       const buttons = rowSel
         .append("div")
