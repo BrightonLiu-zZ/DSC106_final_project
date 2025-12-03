@@ -159,14 +159,14 @@
       .attr("id", "explorer-elixir-filter")
       .attr("class", "explorer-select explorer-select--small");
 
-    elixirSelect.append("option").attr("value", "").html(`Any <img src="images/elixir.webp" class="elixir-icon">`);
+    elixirSelect.append("option").attr("value", "").text("Any");
     elixirSelect
       .selectAll("option.elixir-option")
       .data(uniqueElixirs)
       .join("option")
       .attr("class", "elixir-option")
       .attr("value", (d) => d)
-      .html((d) => `${d} <img src="images/elixir.webp" class="elixir-icon">`);
+      .text((d) => `${d}`);
 
     // Rarity filter
     const raritySelect = filterRow
