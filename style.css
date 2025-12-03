@@ -576,3 +576,11 @@ body {
   background-position: right 4px center;
   padding-right: 20px;
 }
+
+#explorer-elixir-filter option.elixir-any {
+  background-image: url("images/elixir.webp");
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+  background-position: left 4px center;
+  padding-left: 20px;
+}
