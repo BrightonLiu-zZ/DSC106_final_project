@@ -562,3 +562,9 @@ body {
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+
+.elixir-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}
