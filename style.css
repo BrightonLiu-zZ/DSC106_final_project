@@ -1,3 +1,4 @@
+
 /* style.css
    Layout + look for discrete slides, charts, and explorer container
 */
@@ -586,3 +587,52 @@ body::before {
   filter: brightness(0.6) blur(2px);
   z-index: -1; /* keeps background behind everything */
 }
+
+/* Center the toggle above the chart */
+.centered-toggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+/* Modern button style */
+.explorer-toggle-btn {
+  padding: 8px 16px;
+  border-radius: 24px;
+  border: 1px solid #ccc;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.explorer-toggle-btn.active {
+  background: linear-gradient(135deg, #1f77b4, #4ba3f7);
+  color: #fff;
+  border-color: #1f77b4;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.explorer-toggle-btn:hover:not(.active) {
+  background-color: #e0e0e0;
+}
+
+.slide-images {
+  display: flex;
+  flex-direction: column; /* stack vertically */
+  align-items: center;    /* center horizontally */
+  gap: 16px;              /* spacing between images */
+  margin-top: 16px;
+}
+
+.slide-image {
+  width: 300px;
+  border-radius: 8px;
+}
+
+.slide-image-large {
+  width: 500px; /* slightly bigger than the first */
+}
+

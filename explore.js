@@ -1,17 +1,4 @@
-// explore.js
-// Data exploration playground for Season 18.
-//
-// Features (from the project manual):
-// 1. Display a bar plot similar to the story slides.
-// 2. Let users search for cards by name / keyword.
-// 3. Let users add searched cards to each of the two bins.
-// 4. Let users filter cards by elixir, rarity, and card type. :contentReference[oaicite:1]{index=1}
-//
-// Assumes common.js exposes:
-//   - loadCardData() -> Promise<rows>
-//   - ARENA_CONFIG (array of { name, key, index })
-//   - getWinsForArena(row, arenaNameOrKey)
-//   - getCardBin(name)
+// explore.js — Full version with toggle (Option A)
 
 (function () {
   "use strict";
@@ -21,9 +8,12 @@
   let selectedArenaName = null;
 
   const state = {
-    toxicBin: new Set(), // card_name strings
+    toxicBin: new Set(),
     spellBin: new Set(),
+    chartMode: "wins", // "wins" or "winrate"
   };
+
+  // ---------- INIT ----------
 
   function initExplorer() {
     const controlsEl = document.querySelector("#explorer-controls");
@@ -35,40 +25,38 @@
       allCards = rows || [];
       arenaConfig = window.ARENA_CONFIG || [];
 
-      // Default arena: last one (Legendary Arena)
+      // Default arena = highest
       selectedArenaName =
         (arenaConfig[arenaConfig.length - 1] || arenaConfig[0] || {}).name ||
         null;
 
       inferInitialBins();
       buildExplorerUI();
+      buildChartToggleUI();
       updateBinLists();
       updateSearchResults();
       updateExplorerChart();
     });
   }
 
-  // Seed bins from the story classification (bin field in CARD_DATA from common.js)
+  // Seed bins based on story defaults
   function inferInitialBins() {
     state.toxicBin.clear();
     state.spellBin.clear();
 
     allCards.forEach((row) => {
-      if (row.bin === "toxic_troop") {
-        state.toxicBin.add(row.card_name);
-      } else if (row.bin === "cheap_spell") {
-        state.spellBin.add(row.card_name);
-      }
+      if (row.bin === "toxic_troop") state.toxicBin.add(row.card_name);
+      else if (row.bin === "cheap_spell") state.spellBin.add(row.card_name);
     });
   }
 
-  // ---------- UI BUILDING ----------
+  // ---------- UI BUILD ----------
 
   function buildExplorerUI() {
     const controls = d3.select("#explorer-controls");
     controls.selectAll("*").remove();
 
-    // --- Section 1: Arena selector ---
+    // Arena selector
     const arenaSection = controls
       .append("div")
       .attr("class", "explorer-section");
@@ -97,7 +85,9 @@
       updateSearchResults();
     });
 
-    // --- Section 2: Search & filters ---
+    // -------------------------------
+    // Search + filters
+    // -------------------------------
     const filterSection = controls
       .append("div")
       .attr("class", "explorer-section");
@@ -110,9 +100,7 @@
     filterSection
       .append("p")
       .attr("class", "explorer-helper-text")
-      .text(
-        "Search by name or keyword, then add cards into each bin. Filters apply to the search results."
-      );
+      .text("Search by name or keyword, then add cards into each bin.");
 
     const searchInput = filterSection
       .append("input")
@@ -128,77 +116,65 @@
       .append("div")
       .attr("class", "explorer-filter-row");
 
-    // unique values from data
+    // Build unique filter lists
     const uniqueElixirs = Array.from(
-      new Set(
-        allCards
-          .map((d) => d.elixir)
-          .filter((v) => v !== null && v !== undefined && v !== "")
-      )
+      new Set(allCards.map((d) => d.elixir).filter((v) => v != null))
     ).sort((a, b) => a - b);
 
     const uniqueRarities = Array.from(
-      new Set(
-        allCards
-          .map((d) => d.rarity)
-          .filter((v) => v !== null && v !== undefined && v !== "")
-      )
+      new Set(allCards.map((d) => d.rarity).filter(Boolean))
     ).sort();
 
     const uniqueTypes = Array.from(
-      new Set(
-        allCards
-          .map((d) => d.card_type)
-          .filter((v) => v !== null && v !== undefined && v !== "")
-      )
+      new Set(allCards.map((d) => d.card_type).filter(Boolean))
     ).sort();
 
-    // Elixir filter
+    // Elixir select
     const elixirSelect = filterRow
       .append("select")
       .attr("id", "explorer-elixir-filter")
       .attr("class", "explorer-select explorer-select--small");
 
     elixirSelect.append("option").attr("value", "").text("Any elixir");
+
     elixirSelect
-      .selectAll("option.elixir-option")
+      .selectAll("option.elixir")
       .data(uniqueElixirs)
       .join("option")
-      .attr("class", "elixir-option")
       .attr("value", (d) => d)
       .text((d) => `${d} elixir`);
 
-    // Rarity filter
+    // Rarity select
     const raritySelect = filterRow
       .append("select")
       .attr("id", "explorer-rarity-filter")
       .attr("class", "explorer-select explorer-select--small");
 
     raritySelect.append("option").attr("value", "").text("Any rarity");
+
     raritySelect
-      .selectAll("option.rarity-option")
+      .selectAll("option.rarity")
       .data(uniqueRarities)
       .join("option")
-      .attr("class", "rarity-option")
       .attr("value", (d) => d)
       .text((d) => d);
 
-    // Type filter
+    // Type select
     const typeSelect = filterRow
       .append("select")
       .attr("id", "explorer-type-filter")
       .attr("class", "explorer-select explorer-select--small");
 
     typeSelect.append("option").attr("value", "").text("Any type");
+
     typeSelect
-      .selectAll("option.type-option")
+      .selectAll("option.type")
       .data(uniqueTypes)
       .join("option")
-      .attr("class", "type-option")
       .attr("value", (d) => d)
       .text((d) => d);
 
-    // Search results container
+    // Search results
     filterSection
       .append("div")
       .attr("class", "explorer-section-subtitle")
@@ -209,7 +185,9 @@
       .attr("id", "explorer-search-results")
       .attr("class", "explorer-search-results");
 
-    // --- Section 3: Bin overview + reset buttons ---
+    // -------------------------------
+    // Bin builder
+    // -------------------------------
     const binsSection = controls
       .append("div")
       .attr("class", "explorer-section explorer-section--bins");
@@ -223,6 +201,7 @@
       .append("div")
       .attr("class", "explorer-bins-row");
 
+    // Toxic bin
     const toxicCol = binsRow
       .append("div")
       .attr("class", "explorer-bin explorer-bin--toxic");
@@ -237,6 +216,7 @@
       .attr("id", "explorer-toxic-bin-list")
       .attr("class", "explorer-bin-list");
 
+    // Spell bin
     const spellCol = binsRow
       .append("div")
       .attr("class", "explorer-bin explorer-bin--spell");
@@ -251,13 +231,13 @@
       .attr("id", "explorer-spell-bin-list")
       .attr("class", "explorer-bin-list");
 
+    // Reset buttons
     const resetRow = binsSection
       .append("div")
       .attr("class", "explorer-reset-row");
 
     resetRow
       .append("button")
-      .attr("type", "button")
       .attr("class", "explorer-button")
       .text("Reset to default bins")
       .on("click", () => {
@@ -269,7 +249,6 @@
 
     resetRow
       .append("button")
-      .attr("type", "button")
       .attr("class", "explorer-button explorer-button--ghost")
       .text("Clear both bins")
       .on("click", () => {
@@ -280,24 +259,60 @@
         updateExplorerChart();
       });
 
-    // Hook up filter change events
+    // Register filter listeners
     function handleFilterChange() {
       updateSearchResults();
     }
-
     searchInput.on("input", handleFilterChange);
     elixirSelect.on("change", handleFilterChange);
     raritySelect.on("change", handleFilterChange);
     typeSelect.on("change", handleFilterChange);
   }
 
-  // ---------- SEARCH + FILTER LOGIC ----------
+  // ---------- CHART TOGGLE UI ----------
+
+function buildChartToggleUI() {
+  const container = d3.select("#explorer-chart");
+  container.selectAll(".explorer-chart-toggle").remove();
+
+  const toggleBar = container
+    .insert("div", ":first-child") // insert above chart
+    .attr("class", "explorer-chart-toggle centered-toggle");
+
+  const options = [
+    { mode: "wins", label: "Wins" },
+    { mode: "winrate", label: "Win Rate" },
+  ];
+
+  toggleBar
+    .selectAll("button")
+    .data(options)
+    .join("button")
+    .attr("class", (d) =>
+      `explorer-toggle-btn ${d.mode === "wins" ? "explorer-toggle-wins" : "explorer-toggle-winrate"}`
+    )
+    .classed("active", (d) => state.chartMode === d.mode)
+    .text((d) => d.label)
+    .on("click", (event, d) => {
+      state.chartMode = d.mode;
+      updateExplorerChart();
+    });
+}
+
+
+  function updateToggleActive() {
+    const winsBtn = d3.select(".explorer-toggle-wins");
+    const rateBtn = d3.select(".explorer-toggle-winrate");
+
+    winsBtn.classed("active", state.chartMode === "wins");
+    rateBtn.classed("active", state.chartMode === "winrate");
+  }
+
+  // ---------- SEARCH ----------
 
   function getFilteredCards() {
-    const term = (d3
-      .select("#explorer-search-input")
-      .property("value") || ""
-    ).toLowerCase();
+    const term = (d3.select("#explorer-search-input").property("value") || "")
+      .toLowerCase();
 
     const elixirFilter = d3
       .select("#explorer-elixir-filter")
@@ -305,13 +320,11 @@
     const rarityFilter = d3
       .select("#explorer-rarity-filter")
       .property("value");
-    const typeFilter = d3
-      .select("#explorer-type-filter")
-      .property("value");
+    const typeFilter = d3.select("#explorer-type-filter").property("value");
 
     let filtered = allCards.slice();
 
-    // Only show cards that are available (have wins) in the selected arena
+    // Must have wins in arena
     if (selectedArenaName && typeof window.getWinsForArena === "function") {
       filtered = filtered.filter(
         (row) => window.getWinsForArena(row, selectedArenaName) > 0
@@ -320,7 +333,7 @@
 
     if (term) {
       filtered = filtered.filter((row) => {
-        const name = (row.card_name || "").toLowerCase();
+        const name = row.card_name.toLowerCase();
         const type = (row.card_type || "").toLowerCase();
         const rarity = (row.rarity || "").toLowerCase();
         return (
@@ -330,8 +343,9 @@
     }
 
     if (elixirFilter !== "") {
-      const elixirVal = Number(elixirFilter);
-      filtered = filtered.filter((row) => Number(row.elixir) === elixirVal);
+      filtered = filtered.filter(
+        (row) => Number(row.elixir) === Number(elixirFilter)
+      );
     }
 
     if (rarityFilter !== "") {
@@ -342,15 +356,13 @@
       filtered = filtered.filter((row) => row.card_type === typeFilter);
     }
 
-    // Sort by wins in the chosen arena, descending
-    if (selectedArenaName && typeof window.getWinsForArena === "function") {
-      filtered.sort((a, b) =>
-        d3.descending(
-          window.getWinsForArena(a, selectedArenaName),
-          window.getWinsForArena(b, selectedArenaName)
-        )
-      );
-    }
+    // Sort by wins
+    filtered.sort((a, b) =>
+      d3.descending(
+        window.getWinsForArena(a, selectedArenaName),
+        window.getWinsForArena(b, selectedArenaName)
+      )
+    );
 
     return filtered;
   }
@@ -359,7 +371,7 @@
     const container = d3.select("#explorer-search-results");
     if (container.empty()) return;
 
-    const cards = getFilteredCards().slice(0, 40); // cap list length
+    const cards = getFilteredCards().slice(0, 40);
 
     container.selectAll("*").remove();
 
@@ -393,24 +405,26 @@
       const metaParts = [];
       if (d.card_type) metaParts.push(d.card_type);
       if (d.rarity) metaParts.push(d.rarity);
-      if (d.elixir !== undefined && d.elixir !== null) {
-        metaParts.push(`${d.elixir} <img src="images/elixir.webp" class="elixir-icon">`);
-      }
+      if (d.elixir != null)
+        metaParts.push(
+          `${d.elixir} <img src="images/elixir.webp" class="elixir-icon">`
+        );
 
       info
         .append("div")
         .attr("class", "explorer-search-card-meta")
         .html(metaParts.join(" · "));
 
+      // Buttons
       const buttons = rowSel
         .append("div")
         .attr("class", "explorer-search-card-buttons");
 
-      // Toxic bin button
       const inToxic = state.toxicBin.has(d.card_name);
+      const inSpell = state.spellBin.has(d.card_name);
+
       const toxicBtn = buttons
         .append("button")
-        .attr("type", "button")
         .attr(
           "class",
           "explorer-button explorer-button--tiny explorer-button--toxic"
@@ -426,11 +440,8 @@
         });
       }
 
-      // Cheap spell bin button
-      const inSpell = state.spellBin.has(d.card_name);
       const spellBtn = buttons
         .append("button")
-        .attr("type", "button")
         .attr(
           "class",
           "explorer-button explorer-button--tiny explorer-button--spell"
@@ -456,7 +467,7 @@
     if (binKey === "toxic") {
       state.spellBin.delete(cardName);
       state.toxicBin.add(cardName);
-    } else if (binKey === "spell") {
+    } else {
       state.toxicBin.delete(cardName);
       state.spellBin.add(cardName);
     }
@@ -469,7 +480,6 @@
   function updateBinLists() {
     const toxicList = d3.select("#explorer-toxic-bin-list");
     const spellList = d3.select("#explorer-spell-bin-list");
-
     if (toxicList.empty() || spellList.empty()) return;
 
     toxicList.selectAll("*").remove();
@@ -478,17 +488,21 @@
     const toxicCards = Array.from(state.toxicBin).sort();
     const spellCards = Array.from(state.spellBin).sort();
 
-    if (!toxicCards.length) {
-      toxicList
-        .append("div")
-        .attr("class", "explorer-bin-empty")
-        .text("No cards yet. Add from the search results.");
-    } else {
-      const items = toxicList
+    function makeItems(sel, cards, bin) {
+      if (!cards.length) {
+        sel.append("div")
+          .attr("class", "explorer-bin-empty")
+          .text("No cards yet. Add from the search results.");
+        return;
+      }
+      const items = sel
         .selectAll(".explorer-bin-pill")
-        .data(toxicCards, (d) => d)
+        .data(cards, (d) => d)
         .join("div")
-        .attr("class", "explorer-bin-pill explorer-bin-pill--toxic");
+        .attr(
+          "class",
+          `explorer-bin-pill explorer-bin-pill--${bin === "toxic" ? "toxic" : "spell"}`
+        );
 
       items
         .append("span")
@@ -497,127 +511,223 @@
 
       items
         .append("button")
-        .attr("type", "button")
         .attr("class", "explorer-bin-pill-remove")
         .text("×")
         .on("click", (event, d) => {
           event.stopPropagation();
-          state.toxicBin.delete(d);
+          state[bin === "toxic" ? "toxicBin" : "spellBin"].delete(d);
           updateBinLists();
           updateSearchResults();
           updateExplorerChart();
         });
     }
 
-    if (!spellCards.length) {
-      spellList
-        .append("div")
-        .attr("class", "explorer-bin-empty")
-        .text("No cards yet. Add from the search results.");
-    } else {
-      const items = spellList
-        .selectAll(".explorer-bin-pill")
-        .data(spellCards, (d) => d)
-        .join("div")
-        .attr("class", "explorer-bin-pill explorer-bin-pill--spell");
-
-      items
-        .append("span")
-        .attr("class", "explorer-bin-pill-label")
-        .text((d) => d);
-
-      items
-        .append("button")
-        .attr("type", "button")
-        .attr("class", "explorer-bin-pill-remove")
-        .text("×")
-        .on("click", (event, d) => {
-          event.stopPropagation();
-          state.spellBin.delete(d);
-          updateBinLists();
-          updateSearchResults();
-          updateExplorerChart();
-        });
-    }
+    makeItems(toxicList, toxicCards, "toxic");
+    makeItems(spellList, spellCards, "spell");
   }
 
-  // ---------- CHART RENDERING ----------
+  // ---------- CHART DATA ----------
 
   function buildChartDataForArena() {
     if (!selectedArenaName) return [];
 
-    const byName = new Map(allCards.map((row) => [row.card_name, row]));
+    const byName = new Map(allCards.map((r) => [r.card_name, r]));
     const combined = [];
 
-    state.toxicBin.forEach((name) => {
+    function add(name, bin) {
       const row = byName.get(name);
       if (!row) return;
-      const wins = window.getWinsForArena
-        ? window.getWinsForArena(row, selectedArenaName)
-        : 0;
+
+      const wins = window.getWinsForArena(row, selectedArenaName) || 0;
       if (wins <= 0) return;
+
+      const total = row.overall_count || 0;
+      const winRate = total ? wins / total : 0;
+
       combined.push({
         card_name: name,
-        bin: "toxic_troop",
         wins,
+        win_rate: winRate,
+        bin,
       });
-    });
+    }
 
-    state.spellBin.forEach((name) => {
-      const row = byName.get(name);
-      if (!row) return;
-      const wins = window.getWinsForArena
-        ? window.getWinsForArena(row, selectedArenaName)
-        : 0;
-      if (wins <= 0) return;
-      combined.push({
-        card_name: name,
-        bin: "cheap_spell",
-        wins,
-      });
-    });
+    state.toxicBin.forEach((name) => add(name, "toxic_troop"));
+    state.spellBin.forEach((name) => add(name, "cheap_spell"));
 
-    // Sort by wins, tallest on the left (like the story slides)
     combined.sort((a, b) => d3.descending(a.wins, b.wins));
-
     return combined;
   }
+
+  // ---------- CHART RENDERING ----------
 
   function updateExplorerChart() {
     const container = d3.select("#explorer-chart");
     if (container.empty()) return;
 
-    container.selectAll("*").remove();
+    updateToggleActive();
 
-    if (!selectedArenaName) {
-      container
-        .append("div")
-        .attr("class", "explorer-chart-empty")
-        .text("Select an arena to see the comparison.");
-      return;
-    }
+    // Clear old charts, keep toggle
+    container.selectAll(".explorer-chart-area").remove();
+
+    const chartArea = container
+      .append("div")
+      .attr("class", "explorer-chart-area");
 
     const data = buildChartDataForArena();
-
     if (!data.length) {
-      container
+      chartArea
         .append("div")
         .attr("class", "explorer-chart-empty")
         .text(
-          "No cards in your bins have wins in this arena. Try adding cards or switching arenas."
+          "No cards in your bins have wins in this arena. Add cards or switch arenas."
         );
       return;
     }
 
+    if (state.chartMode === "wins") {
+      renderWinsChart(chartArea, data);
+    } else {
+      renderWinRateChart(chartArea, data);
+    }
+  }
+
+  // ---- Wins Chart ----
+
+  function renderWinsChart(container, data) {
     const node = container.node();
     const fullWidth = Math.max(320, node.clientWidth || 320);
+
     const margin = { top: 32, right: 40, bottom: 80, left: 60 };
     const width = fullWidth - margin.left - margin.right;
     const height = 360 - margin.top - margin.bottom;
 
-    const svg = container
+    const wrap = container.append("div").attr("class", "explorer-chart-wins");
+
+    const svg = wrap
       .append("svg")
-      .attr("width", width + margin.left + margin.right)
+      .attr("width", fullWidth)
+      .attr("height", height + margin.top + margin.bottom);
+
+    const g = svg
+      .append("g")
+      .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+    const x = d3
+      .scaleBand()
+      .domain(data.map((d) => d.card_name))
+      .range([0, width])
+      .padding(0.2);
+
+    const y = d3
+      .scaleLinear()
+      .domain([0, d3.max(data, (d) => d.wins)])
+      .nice()
+      .range([height, 0]);
+
+    const color = d3
+      .scaleOrdinal()
+      .domain(["toxic_troop", "cheap_spell"])
+      .range(["#d62728", "#1f77b4"]);
+
+    g.selectAll(".bar-wins")
+      .data(data)
+      .join("rect")
+      .attr("class", "bar-wins")
+      .attr("x", (d) => x(d.card_name))
+      .attr("y", (d) => y(d.wins))
+      .attr("width", x.bandwidth())
+      .attr("height", (d) => height - y(d.wins))
+      .attr("fill", (d) => color(d.bin));
+
+    g.append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+      .attr("transform", "rotate(-35)")
+      .style("text-anchor", "end");
+
+    g.append("g").call(d3.axisLeft(y));
+
+    g.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x", -height / 2)
+      .attr("y", -45)
+      .attr("text-anchor", "middle")
+      .text("Total Wins");
+
+    const toxicMean = d3.mean(
+      data.filter((d) => d.bin === "toxic_troop").map((d) => d.wins)
+    );
+
+    const spellMean = d3.mean(
+      data.filter((d) => d.bin === "cheap_spell").map((d) => d.wins)
+    );
+
+    const meanGroup = g.append("g");
+
+    if (toxicMean != null) {
+      meanGroup
+        .append("line")
+        .attr("x1", 0)
+        .attr("x2", width)
+        .attr("y1", y(toxicMean))
+        .attr("y2", y(toxicMean))
+        .attr("class", "mean-line mean-line--toxic");
+
+      meanGroup
+        .append("text")
+        .attr("x", width)
+        .attr("y", y(toxicMean) - 4)
+        .attr("text-anchor", "end")
+        .attr("class", "mean-label mean-label--toxic")
+        .text("Toxic troop mean");
+    }
+
+    if (spellMean != null) {
+      meanGroup
+        .append("line")
+        .attr("x1", 0)
+        .attr("x2", width)
+        .attr("y1", y(spellMean))
+        .attr("y2", y(spellMean))
+        .attr("class", "mean-line mean-line--spell");
+
+      meanGroup
+        .append("text")
+        .attr("x", width)
+        .attr("y", y(spellMean) - 4)
+        .attr("text-anchor", "end")
+        .attr("class", "mean-label mean-label--spell")
+        .text("Cheap spell mean");
+    }
+
+    svg
+      .append("text")
+      .attr("x", margin.left)
+      .attr("y", 20)
+      .attr("class", "explorer-chart-title")
+      .style("font-weight", "600")
+      .text("Wins by Card");
+  }
+
+  // ---- Win Rate Chart ----
+
+  function renderWinRateChart(container, data) {
+    const node = container.node();
+    const fullWidth = Math.max(320, node.clientWidth || 320);
+
+    const margin = { top: 32, right: 40, bottom: 80, left: 60 };
+    const width = fullWidth - margin.left - margin.right;
+    const height = 340 - margin.top - margin.bottom;
+
+    const wrap = container
+      .append("div")
+      .attr("class", "explorer-chart-winrate");
+
+    const svg = wrap
+      .append("svg")
+      .attr("width", fullWidth)
       .attr("height", height + margin.top + margin.bottom);
 
     const g = svg
@@ -632,7 +742,7 @@
 
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.wins) || 1])
+      .domain([0, d3.max(data, (d) => d.win_rate) || 0.5])
       .nice()
       .range([height, 0]);
 
@@ -641,129 +751,43 @@
       .domain(["toxic_troop", "cheap_spell"])
       .range(["#d62728", "#1f77b4"]);
 
-    // Bars
-    g.selectAll(".explorer-bar")
-      .data(data, (d) => d.card_name)
+    g.selectAll(".bar-winrate")
+      .data(data)
       .join("rect")
-      .attr("class", "explorer-bar")
+      .attr("class", "bar-winrate")
       .attr("x", (d) => x(d.card_name))
-      .attr("y", (d) => y(d.wins))
+      .attr("y", (d) => y(d.win_rate))
       .attr("width", x.bandwidth())
-      .attr("height", (d) => height - y(d.wins))
+      .attr("height", (d) => height - y(d.win_rate))
       .attr("fill", (d) => color(d.bin));
 
-    // Axes
     g.append("g")
-      .attr("class", "axis axis--x")
       .attr("transform", `translate(0,${height})`)
       .call(d3.axisBottom(x))
       .selectAll("text")
-      .attr("class", "axis-label")
-      .attr("text-anchor", "end")
       .attr("transform", "rotate(-35)")
-      .attr("dx", "-0.45em")
-      .attr("dy", "0.7em");
+      .style("text-anchor", "end");
 
     g.append("g")
-      .attr("class", "axis axis--y")
-      .call(d3.axisLeft(y).ticks(5));
+      .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%")));
 
-    // Y-axis label
     g.append("text")
-  .attr("class", "axis-title")
-  .attr("transform", "rotate(-90)")
-  .attr("x", -height / 2)
-  .attr("y", -45)
-  .attr("text-anchor", "middle")
-  .text("Total Wins");
+      .attr("transform", "rotate(-90)")
+      .attr("x", -height / 2)
+      .attr("y", -45)
+      .attr("text-anchor", "middle")
+      .text("Win Rate (%)");
 
-    // Mean lines per bin
-    const toxicValues = data
-      .filter((d) => d.bin === "toxic_troop")
-      .map((d) => d.wins);
-    const spellValues = data
-      .filter((d) => d.bin === "cheap_spell")
-      .map((d) => d.wins);
-
-    const toxicMean = toxicValues.length ? d3.mean(toxicValues) : null;
-    const spellMean = spellValues.length ? d3.mean(spellValues) : null;
-
-    const meanGroup = g.append("g").attr("class", "means");
-
-    if (toxicMean != null) {
-      meanGroup
-        .append("line")
-        .attr("class", "mean-line mean-line--toxic")
-        .attr("x1", 0)
-        .attr("x2", width)
-        .attr("y1", y(toxicMean))
-        .attr("y2", y(toxicMean));
-
-      meanGroup
-        .append("text")
-        .attr("class", "mean-label mean-label--toxic")
-        .attr("x", width)
-        .attr("y", y(toxicMean) - 4)
-        .attr("text-anchor", "end")
-        .text("Toxic troop mean");
-    }
-
-    if (spellMean != null) {
-      meanGroup
-        .append("line")
-        .attr("class", "mean-line mean-line--spell")
-        .attr("x1", 0)
-        .attr("x2", width)
-        .attr("y1", y(spellMean))
-        .attr("y2", y(spellMean));
-
-      meanGroup
-        .append("text")
-        .attr("class", "mean-label mean-label--spell")
-        .attr("x", width)
-        .attr("y", y(spellMean) - 4)
-        .attr("text-anchor", "end")
-        .text("Cheap spell mean");
-    }
-
-    // Legend
-    const legend = svg
-      .append("g")
-      .attr("class", "legend")
-      .attr(
-        "transform",
-        `translate(${margin.left}, ${margin.top - 16})`
-      );
-
-    const legendItems = [
-      { label: "Toxic troop", key: "toxic_troop" },
-      { label: "Cheap spell", key: "cheap_spell" },
-    ];
-
-    const legendEntry = legend
-      .selectAll(".legend-item")
-      .data(legendItems)
-      .join("g")
-      .attr("class", "legend-item")
-      .attr("transform", (d, i) => `translate(${i * 140}, 0)`);
-
-    legendEntry
-      .append("rect")
-      .attr("width", 12)
-      .attr("height", 12)
-      .attr("rx", 2)
-      .attr("ry", 2)
-      .attr("fill", (d) => color(d.key));
-
-    legendEntry
+    svg
       .append("text")
-      .attr("x", 18)
-      .attr("y", 10)
-      .attr("class", "legend-label")
-      .text((d) => d.label);
+      .attr("x", margin.left)
+      .attr("y", 20)
+      .attr("class", "explorer-chart-title")
+      .style("font-weight", "600")
+      .text("Win Rate by Card");
   }
 
-  // ---------- INIT ----------
+  // ---------- START ----------
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initExplorer);
