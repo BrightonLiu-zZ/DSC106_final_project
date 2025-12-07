@@ -608,6 +608,7 @@ function buildChartToggleUI() {
 
   // ---- Wins Chart ----
 
+
   function renderWinsChart(container, data) {
     const node = container.node();
     const fullWidth = Math.max(320, node.clientWidth || 320);
@@ -633,9 +634,25 @@ function buildChartToggleUI() {
       .range([0, width])
       .padding(0.2);
 
+    const minWins = d3.min(data, (d) => d.wins) || 0;
+    const maxWins = d3.max(data, (d) => d.wins) || 0;
+
+    let yMin = minWins;
+    let yMax = maxWins;
+
+    // Add padding around the data range so mean lines / differences pop out
+    const pad = (yMax - yMin) * 0.1 || (maxWins || 1) * 0.1;
+    yMin = Math.max(0, yMin - pad);
+    yMax = yMax + pad;
+
+    if (yMax <= yMin) {
+      yMin = 0;
+      yMax = maxWins || 1;
+    }
+
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.wins)])
+      .domain([yMin, yMax])
       .nice()
       .range([height, 0]);
 
@@ -663,11 +680,21 @@ function buildChartToggleUI() {
 
     g.append("g").call(d3.axisLeft(y));
 
+    // X-axis label (“Cards”)
+    g.append("text")
+      .attr("x", width / 2)
+      .attr("y", height + 55)
+      .attr("text-anchor", "middle")
+      .attr("class", "axis-label")
+      .text("Cards");
+
+    // Y-axis label
     g.append("text")
       .attr("transform", "rotate(-90)")
       .attr("x", -height / 2)
       .attr("y", -45)
       .attr("text-anchor", "middle")
+      .attr("class", "axis-label")
       .text("Total Wins");
 
     const toxicMean = d3.mean(
@@ -716,6 +743,19 @@ function buildChartToggleUI() {
         .text("Cheap spell mean");
     }
 
+    // "Zoomed scale: a–b wins" label
+    const [d0, d1] = y.domain();
+    const fmt = d3.format(",");
+    svg
+      .append("text")
+      .attr("x", fullWidth - margin.right)
+      .attr("y", height + margin.top + margin.bottom - 6)
+      .attr("text-anchor", "end")
+      .attr("class", "explorer-chart-note")
+      .style("font-size", "0.7rem")
+      .style("fill", "#555555")
+      .text(`Zoomed scale: ${fmt(d0)}–${fmt(d1)} wins`);
+
     svg
       .append("text")
       .attr("x", margin.left)
@@ -724,6 +764,10 @@ function buildChartToggleUI() {
       .style("font-weight", "600")
       .text("Wins by Card");
   }
+
+
+
+  
 
   // ---- Win Rate Chart ----
 
@@ -803,14 +847,24 @@ function buildChartToggleUI() {
     g.append("g")
       .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%")));
 
+    // Y-axis label
     g.append("text")
       .attr("transform", "rotate(-90)")
       .attr("x", -height / 2)
       .attr("y", -45)
       .attr("text-anchor", "middle")
+      .attr("class", "axis-label")
       .text("Win Rate (%)");
 
-    // Zoomed scale + 50% reference line
+    // X-axis label (“Cards”)
+    g.append("text")
+      .attr("x", width / 2)
+      .attr("y", height + 55)
+      .attr("text-anchor", "middle")
+      .attr("class", "axis-label")
+      .text("Cards");
+
+    // 50% reference line (no label now)
     if (yMin < 0.5 && yMax > 0.5) {
       g.append("line")
         .attr("x1", 0)
@@ -818,15 +872,10 @@ function buildChartToggleUI() {
         .attr("y1", y(0.5))
         .attr("y2", y(0.5))
         .attr("class", "mean-line mean-line--baseline");
-
-      g.append("text")
-        .attr("x", 0)
-        .attr("y", y(0.5) - 4)
-        .attr("text-anchor", "start")
-        .attr("class", "mean-label mean-label--baseline")
-        .text("50% win rate");
     }
 
+    // "Zoomed scale: x%–y%" label
+    const [d0, d1] = y.domain();
     svg
       .append("text")
       .attr("x", fullWidth - margin.right)
@@ -836,15 +885,10 @@ function buildChartToggleUI() {
       .style("font-size", "0.7rem")
       .style("fill", "#555555")
       .text(
-        `Zoomed scale: ${d3.format(".0%")(yMin)}–${d3.format(".0%")(yMax)}`
+        `Zoomed scale: ${d3.format(".0%")(d0)}–${d3.format(".0%")(d1)}`
       );
 
-    // === NEW: mean lines for win rate, like in Wins mode ===
-
-
-
-
-    // === NEW: mean lines for win rate, like in Wins mode ===
+    // Mean lines for win rate
     const toxicMean = d3.mean(
       data.filter((d) => d.bin === "toxic_troop").map((d) => d.win_rate)
     );
@@ -889,7 +933,6 @@ function buildChartToggleUI() {
         .attr("class", "mean-label mean-label--spell")
         .text("Cheap spell mean");
     }
-    // === end of new block ===
 
     svg
       .append("text")

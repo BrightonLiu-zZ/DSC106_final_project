@@ -138,8 +138,6 @@
     );
   }
 
-
-
   function renderArenaChart(containerSelector, arenaName, previousArenaName) {
     const container = d3.select(containerSelector);
     if (container.empty()) return;
@@ -150,7 +148,7 @@
       return;
     }
 
-    // NEW: sort bars by wins (descending) so tallest is on the left
+    // Sort bars by wins (descending)
     const sortedData = data.slice().sort((a, b) => d3.descending(a.wins, b.wins));
 
     // Clear previous render (for resize)
@@ -170,7 +168,6 @@
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom + extraGapHeight);
 
-    // unique arrow-head marker for the double-sided arrow between mean lines
     const markerId =
       "mean-gap-arrow-head-" +
       arenaName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
@@ -189,15 +186,13 @@
       .attr("d", "M0 0 L10 5 L0 10 Z")
       .attr("fill", "#555555");
 
-
-
     const g = svg
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
     const x = d3
       .scaleBand()
-      .domain(sortedData.map((d) => d.card_name))   // use sorted order
+      .domain(sortedData.map((d) => d.card_name))
       .range([0, width])
       .padding(0.2);
 
@@ -221,6 +216,19 @@
       .domain([yMin, yMax])
       .nice()
       .range([height, 0]);
+
+    // "Zoomed scale: a–b wins" label for the upper chart
+    const [yd0, yd1] = y.domain();
+    const fmtWins = d3.format(",");
+    svg
+      .append("text")
+      .attr("x", margin.left + width)
+      .attr("y", margin.top + height + 90)
+      .attr("text-anchor", "end")
+      .attr("class", "explorer-chart-note")
+      .style("font-size", "0.7rem")
+      .style("fill", "#555555")
+      .text(`Zoomed scale: ${fmtWins(yd0)}–${fmtWins(yd1)} wins`);
 
     const color = d3
       .scaleOrdinal()
@@ -253,6 +261,15 @@
     g.append("g")
       .attr("class", "axis axis--y")
       .call(d3.axisLeft(y).ticks(5));
+
+    // X-axis label
+    g.append("text")
+      .attr("x", width / 2)
+      .attr("y", height + 70)
+      .attr("text-anchor", "middle")
+      .attr("class", "axis-label")
+      .text("Cards");
+
     // Y-axis label
     g.append("text")
       .attr("transform", "rotate(-90)")
@@ -262,8 +279,7 @@
       .attr("class", "axis-label")
       .text("Total Wins");
 
-
-    // Mean lines for each bin (using sortedData is fine – order doesn’t matter)
+    // Mean lines for each bin
     const toxicValues = sortedData
       .filter((d) => d.bin === "toxic_troop")
       .map((d) => d.wins);
@@ -312,9 +328,8 @@
         .text("Cheap spell mean");
     }
 
+    // --- bottom stacked bar summarizing difference + previous-arena tick ---
     if (toxicMean != null && spellMean != null) {
-      // --- bottom stacked bar summarizing which side is higher ---
-
       const toxicScore = toxicMean;
       const spellScore = spellMean;
       const totalScore = toxicScore + spellScore;
@@ -322,13 +337,12 @@
       if (totalScore > 0) {
         const gapGroup = g.append("g").attr("class", "mean-gap-summary");
 
-        const barY = height + 80; // pushed further below x-axis labels
+        const barY = height + 120;
         const barHeight = 8;
         const totalBarWidth = width;
 
         const toxicWidth = (toxicScore / totalScore) * totalBarWidth;
 
-        // red segment = toxic troops
         gapGroup
           .append("rect")
           .attr("class", "gap-bar gap-bar--toxic")
@@ -337,7 +351,6 @@
           .attr("width", toxicWidth)
           .attr("height", barHeight);
 
-        // blue segment = cheap spells
         gapGroup
           .append("rect")
           .attr("class", "gap-bar gap-bar--spell")
@@ -361,7 +374,7 @@
           .attr("text-anchor", "middle")
           .text(label);
 
-        // --- previous arena tick (skip for Spooky Town) ---
+        // previous-arena tick (skip for Spooky Town)
         if (previousArenaName) {
           const prevData = getArenaData(previousArenaName);
 
@@ -390,11 +403,12 @@
                 .attr("x2", tickX)
                 .attr("y1", barY - 4)
                 .attr("y2", barY + barHeight + 4);
+
               gapGroup
                 .append("text")
                 .attr("class", "gap-bar-prev-label")
                 .attr("x", tickX)
-                .attr("y", barY + barHeight + 16)   // slightly below the bar
+                .attr("y", barY + barHeight + 16)
                 .attr("text-anchor", "middle")
                 .text("Previous arena split");
             }
@@ -403,7 +417,7 @@
       }
     }
 
-    // Simple legend (unchanged)
+    // Legend
     const legend = svg
       .append("g")
       .attr("class", "legend")
@@ -436,6 +450,8 @@
       .attr("class", "legend-label")
       .text((d) => d.label);
   }
+
+
 
   function renderStoryCharts() {
     STORY_ARENAS.forEach((cfg, idx) => {
