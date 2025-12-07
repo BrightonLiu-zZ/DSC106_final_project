@@ -274,7 +274,7 @@
     g.append("text")
       .attr("transform", "rotate(-90)")
       .attr("x", -height / 2)
-      .attr("y", -50)
+      .attr("y", -52)
       .attr("text-anchor", "middle")
       .attr("class", "axis-label")
       .text("Total Wins");
