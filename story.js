@@ -140,7 +140,7 @@
 
 
 
-  function renderArenaChart(containerSelector, arenaName) {
+  function renderArenaChart(containerSelector, arenaName, previousArenaName) {
     const container = d3.select(containerSelector);
     if (container.empty()) return;
 
@@ -162,10 +162,34 @@
     const width = fullWidth - margin.left - margin.right;
     const height = 360 - margin.top - margin.bottom;
 
+    // extra room at the bottom for the “gap” bar
+    const extraGapHeight = 80;
+
     const svg = container
       .append("svg")
       .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom);
+      .attr("height", height + margin.top + margin.bottom + extraGapHeight);
+
+    // unique arrow-head marker for the double-sided arrow between mean lines
+    const markerId =
+      "mean-gap-arrow-head-" +
+      arenaName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+
+    const defs = svg.append("defs");
+    defs
+      .append("marker")
+      .attr("id", markerId)
+      .attr("viewBox", "0 0 10 10")
+      .attr("refX", 5)
+      .attr("refY", 5)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0 0 L10 5 L0 10 Z")
+      .attr("fill", "#555555");
+
+
 
     const g = svg
       .append("g")
@@ -177,9 +201,24 @@
       .range([0, width])
       .padding(0.2);
 
+    const minWins = d3.min(sortedData, (d) => d.wins) || 0;
+    const maxWins = d3.max(sortedData, (d) => d.wins) || 1;
+
+    let yMin = minWins;
+    let yMax = maxWins;
+
+    const pad = (yMax - yMin) * 0.1 || maxWins * 0.1 || 1;
+    yMin = Math.max(0, yMin - pad);
+    yMax = yMax + pad;
+
+    if (yMax <= yMin) {
+      yMin = 0;
+      yMax = maxWins || 1;
+    }
+
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(sortedData, (d) => d.wins) || 1])
+      .domain([yMin, yMax])
       .nice()
       .range([height, 0]);
 
@@ -214,6 +253,15 @@
     g.append("g")
       .attr("class", "axis axis--y")
       .call(d3.axisLeft(y).ticks(5));
+    // Y-axis label
+    g.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x", -height / 2)
+      .attr("y", -50)
+      .attr("text-anchor", "middle")
+      .attr("class", "axis-label")
+      .text("Total Wins");
+
 
     // Mean lines for each bin (using sortedData is fine – order doesn’t matter)
     const toxicValues = sortedData
@@ -264,6 +312,97 @@
         .text("Cheap spell mean");
     }
 
+    if (toxicMean != null && spellMean != null) {
+      // --- bottom stacked bar summarizing which side is higher ---
+
+      const toxicScore = toxicMean;
+      const spellScore = spellMean;
+      const totalScore = toxicScore + spellScore;
+
+      if (totalScore > 0) {
+        const gapGroup = g.append("g").attr("class", "mean-gap-summary");
+
+        const barY = height + 80; // pushed further below x-axis labels
+        const barHeight = 8;
+        const totalBarWidth = width;
+
+        const toxicWidth = (toxicScore / totalScore) * totalBarWidth;
+
+        // red segment = toxic troops
+        gapGroup
+          .append("rect")
+          .attr("class", "gap-bar gap-bar--toxic")
+          .attr("x", 0)
+          .attr("y", barY)
+          .attr("width", toxicWidth)
+          .attr("height", barHeight);
+
+        // blue segment = cheap spells
+        gapGroup
+          .append("rect")
+          .attr("class", "gap-bar gap-bar--spell")
+          .attr("x", toxicWidth)
+          .attr("y", barY)
+          .attr("width", totalBarWidth - toxicWidth)
+          .attr("height", barHeight);
+
+        const label =
+          Math.abs(toxicScore - spellScore) < 1e-6
+            ? "Difference between mean lines: very small in this arena"
+            : toxicScore > spellScore
+            ? "Difference between mean lines: toxic troops higher in this arena"
+            : "Difference between mean lines: cheap spells higher in this arena";
+
+        gapGroup
+          .append("text")
+          .attr("class", "gap-bar-label")
+          .attr("x", totalBarWidth / 2)
+          .attr("y", barY - 6)
+          .attr("text-anchor", "middle")
+          .text(label);
+
+        // --- previous arena tick (skip for Spooky Town) ---
+        if (previousArenaName) {
+          const prevData = getArenaData(previousArenaName);
+
+          const prevToxicVals = prevData
+            .filter((d) => d.bin === "toxic_troop")
+            .map((d) => d.wins);
+          const prevSpellVals = prevData
+            .filter((d) => d.bin === "cheap_spell")
+            .map((d) => d.wins);
+
+          const prevToxicMean =
+            prevToxicVals.length ? d3.mean(prevToxicVals) : null;
+          const prevSpellMean =
+            prevSpellVals.length ? d3.mean(prevSpellVals) : null;
+
+          if (prevToxicMean != null && prevSpellMean != null) {
+            const prevTotal = prevToxicMean + prevSpellMean;
+            if (prevTotal > 0) {
+              const prevToxicRatio = prevToxicMean / prevTotal;
+              const tickX = prevToxicRatio * totalBarWidth;
+
+              gapGroup
+                .append("line")
+                .attr("class", "gap-bar-prev-tick")
+                .attr("x1", tickX)
+                .attr("x2", tickX)
+                .attr("y1", barY - 4)
+                .attr("y2", barY + barHeight + 4);
+              gapGroup
+                .append("text")
+                .attr("class", "gap-bar-prev-label")
+                .attr("x", tickX)
+                .attr("y", barY + barHeight + 16)   // slightly below the bar
+                .attr("text-anchor", "middle")
+                .text("Previous arena split");
+            }
+          }
+        }
+      }
+    }
+
     // Simple legend (unchanged)
     const legend = svg
       .append("g")
@@ -297,11 +436,15 @@
       .attr("class", "legend-label")
       .text((d) => d.label);
   }
+
   function renderStoryCharts() {
-    STORY_ARENAS.forEach((cfg) => {
-      renderArenaChart(cfg.id, cfg.arenaName);
+    STORY_ARENAS.forEach((cfg, idx) => {
+      const prevArena =
+        idx > 0 ? STORY_ARENAS[idx - 1].arenaName : null;
+      renderArenaChart(cfg.id, cfg.arenaName, prevArena);
     });
   }
+
 
   // ---------- INIT ----------
 

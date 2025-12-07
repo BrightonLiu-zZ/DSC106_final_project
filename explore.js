@@ -528,7 +528,7 @@ function buildChartToggleUI() {
 
   // ---------- CHART DATA ----------
 
-  function buildChartDataForArena() {
+  function buildChartDataForArena(sortMode) {
     if (!selectedArenaName) return [];
 
     const byName = new Map(allCards.map((r) => [r.card_name, r]));
@@ -541,8 +541,14 @@ function buildChartToggleUI() {
       const wins = window.getWinsForArena(row, selectedArenaName) || 0;
       if (wins <= 0) return;
 
-      const total = row.overall_count || 0;
-      const winRate = total ? wins / total : 0;
+      let winRate = 0;
+      if (typeof window.getWinRateForArena === "function") {
+        winRate = window.getWinRateForArena(row, selectedArenaName) || 0;
+      } else {
+        // Fallback for old datasets without rwin_* columns
+        const total = row.overall_count || 0;
+        winRate = total ? wins / total : 0;
+      }
 
       combined.push({
         card_name: name,
@@ -552,12 +558,20 @@ function buildChartToggleUI() {
       });
     }
 
+
     state.toxicBin.forEach((name) => add(name, "toxic_troop"));
     state.spellBin.forEach((name) => add(name, "cheap_spell"));
 
-    combined.sort((a, b) => d3.descending(a.wins, b.wins));
+    // Sort based on the currently selected metric
+    if (sortMode === "winrate") {
+      combined.sort((a, b) => d3.descending(a.win_rate, b.win_rate));
+    } else {
+      combined.sort((a, b) => d3.descending(a.wins, b.wins));
+    }
+
     return combined;
   }
+
 
   // ---------- CHART RENDERING ----------
 
@@ -574,7 +588,7 @@ function buildChartToggleUI() {
       .append("div")
       .attr("class", "explorer-chart-area");
 
-    const data = buildChartDataForArena();
+    const data = buildChartDataForArena(state.chartMode);
     if (!data.length) {
       chartArea
         .append("div")
@@ -740,9 +754,27 @@ function buildChartToggleUI() {
       .range([0, width])
       .padding(0.2);
 
+    const minRate = d3.min(data, (d) => d.win_rate);
+    const maxRate = d3.max(data, (d) => d.win_rate);
+
+    let yMin = minRate != null ? minRate : 0;
+    let yMax = maxRate != null ? maxRate : 0.5;
+
+    // Add a bit of padding above/below the data range
+    const pad = (yMax - yMin) * 0.1 || 0.02;
+    yMin = Math.max(0, yMin - pad);
+    yMax = Math.min(1, yMax + pad);
+
+    // If the range is still very tight, enforce a minimum band (~5%)
+    if (yMax - yMin < 0.05) {
+      const mid = (yMax + yMin) / 2;
+      yMin = Math.max(0, mid - 0.025);
+      yMax = Math.min(1, mid + 0.025);
+    }
+
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.win_rate) || 0.5])
+      .domain([yMin, yMax])
       .nice()
       .range([height, 0]);
 
@@ -778,6 +810,87 @@ function buildChartToggleUI() {
       .attr("text-anchor", "middle")
       .text("Win Rate (%)");
 
+    // Zoomed scale + 50% reference line
+    if (yMin < 0.5 && yMax > 0.5) {
+      g.append("line")
+        .attr("x1", 0)
+        .attr("x2", width)
+        .attr("y1", y(0.5))
+        .attr("y2", y(0.5))
+        .attr("class", "mean-line mean-line--baseline");
+
+      g.append("text")
+        .attr("x", 0)
+        .attr("y", y(0.5) - 4)
+        .attr("text-anchor", "start")
+        .attr("class", "mean-label mean-label--baseline")
+        .text("50% win rate");
+    }
+
+    svg
+      .append("text")
+      .attr("x", fullWidth - margin.right)
+      .attr("y", height + margin.top + margin.bottom - 6)
+      .attr("text-anchor", "end")
+      .attr("class", "explorer-chart-note")
+      .style("font-size", "0.7rem")
+      .style("fill", "#555555")
+      .text(
+        `Zoomed scale: ${d3.format(".0%")(yMin)}–${d3.format(".0%")(yMax)}`
+      );
+
+    // === NEW: mean lines for win rate, like in Wins mode ===
+
+
+
+
+    // === NEW: mean lines for win rate, like in Wins mode ===
+    const toxicMean = d3.mean(
+      data.filter((d) => d.bin === "toxic_troop").map((d) => d.win_rate)
+    );
+    const spellMean = d3.mean(
+      data.filter((d) => d.bin === "cheap_spell").map((d) => d.win_rate)
+    );
+
+    const meanGroup = g.append("g");
+
+    if (toxicMean != null) {
+      meanGroup
+        .append("line")
+        .attr("x1", 0)
+        .attr("x2", width)
+        .attr("y1", y(toxicMean))
+        .attr("y2", y(toxicMean))
+        .attr("class", "mean-line mean-line--toxic");
+
+      meanGroup
+        .append("text")
+        .attr("x", width)
+        .attr("y", y(toxicMean) - 4)
+        .attr("text-anchor", "end")
+        .attr("class", "mean-label mean-label--toxic")
+        .text("Toxic troop mean");
+    }
+
+    if (spellMean != null) {
+      meanGroup
+        .append("line")
+        .attr("x1", 0)
+        .attr("x2", width)
+        .attr("y1", y(spellMean))
+        .attr("y2", y(spellMean))
+        .attr("class", "mean-line mean-line--spell");
+
+      meanGroup
+        .append("text")
+        .attr("x", width)
+        .attr("y", y(spellMean) - 4)
+        .attr("text-anchor", "end")
+        .attr("class", "mean-label mean-label--spell")
+        .text("Cheap spell mean");
+    }
+    // === end of new block ===
+
     svg
       .append("text")
       .attr("x", margin.left)
@@ -786,6 +899,8 @@ function buildChartToggleUI() {
       .style("font-weight", "600")
       .text("Win Rate by Card");
   }
+
+
 
   // ---------- START ----------
 

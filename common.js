@@ -124,6 +124,47 @@
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
+
+  /**
+   * Get win rate for a card in a specific arena.
+   * Uses rwin_* columns if available (precomputed as wins / (wins + losses)).
+   * Falls back to wins / overall_count if rwin_* is missing.
+   */
+  function getWinRateForArena(cardRow, arenaNameOrKey) {
+    if (!cardRow) return 0;
+
+    let key = arenaNameOrKey;
+    if (!key) return 0;
+
+    // If we were passed an arena NAME, look up its key (e.g. "count_2")
+    if (!/^count_/.test(key) && !/^rwin_/.test(key)) {
+      const arenaMeta = ARENA_CONFIG.find((a) => a.name === key);
+      key = arenaMeta ? arenaMeta.key : null;
+    }
+    if (!key) return 0;
+
+    // Map "count_2" -> "rwin_2"
+    const rKey = key.replace(/^count_/, "rwin_");
+    let value = cardRow[rKey];
+
+    // If rwin_* is present, use it directly
+    if (value != null && value !== "") {
+      if (typeof value === "number" && isFinite(value)) return value;
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+
+    // Fallback: approximate from wins + overall_count (old dataset)
+    const wins = getWinsForArena(cardRow, key);
+    const total =
+      typeof cardRow.overall_count === "number"
+        ? cardRow.overall_count
+        : Number(cardRow.overall_count) || 0;
+
+    return total > 0 ? wins / total : 0;
+  }
+
+
   // Build the story chart data:
   // STORY_CHART_DATA = { [arenaName]: [{ card_name, bin, wins, ... }, ...] }
   function buildStoryChartData(rows) {
@@ -193,5 +234,6 @@
   window.loadCardData = loadCardData;
   window.getCardBin = getCardBin;
   window.getWinsForArena = getWinsForArena;
+  window.getWinRateForArena = getWinRateForArena;  // NEW
   window.loadStoryData = loadStoryData;
 })();

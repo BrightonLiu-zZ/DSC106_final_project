@@ -129,9 +129,11 @@ body {
 .slides {
   position: relative;
   flex: 1;
-  overflow: hidden;
+  overflow-x: hidden;   /* keep horizontal clipping */
+  overflow-y: auto;     /* allow vertical scrolling when zoomed */
   cursor: pointer; /* click anywhere to advance */
 }
+
 
 /* Each slide takes the full viewport below header */
 .slide {
@@ -313,11 +315,11 @@ body {
 }
 
 .mean-line--toxic {
-  stroke: #d62728;
+  stroke: #f08a8a;  /* lighter red than bars */
 }
 
 .mean-line--spell {
-  stroke: #1f77b4;
+  stroke: #6fa9e8;  /* lighter blue than bars */
 }
 
 .mean-label {
@@ -331,6 +333,39 @@ body {
 
 .legend-label {
   font-size: 0.75rem;
+  fill: #333333;
+}
+
+/* Visual gap between means (story charts) */
+
+.mean-gap-arrow-line {
+  stroke: #555555;
+  stroke-width: 1.5px;
+}
+
+.gap-bar {
+  shape-rendering: crispEdges;
+}
+
+.gap-bar--toxic {
+  fill: #d62728; /* same red as toxic bars */
+}
+
+.gap-bar--spell {
+  fill: #1f77b4; /* same blue as cheap spells */
+}
+
+.gap-bar-label {
+  font-size: 0.7rem;
+  fill: #333333;
+}
+.gap-bar-prev-tick {
+  stroke: #333333;
+  stroke-width: 1.5px;
+}
+
+.gap-bar-prev-label {
+  font-size: 0.65rem;
   fill: #333333;
 }
 
