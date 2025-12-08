@@ -49,11 +49,11 @@
 
   // Arena metadata (names MUST match story.html & story.js) :contentReference[oaicite:1]{index=1}
   const ARENA_CONFIG = [
-    { index: 0, key: "count_0", name: "Spooky Town" },
-    { index: 1, key: "count_1", name: "Rascal's Hideout" },
-    { index: 2, key: "count_2", name: "Serenity Peak" },
-    { index: 3, key: "count_3", name: "Miner's Mine" },
-    { index: 4, key: "count_4", name: "Legendary Arena" },
+    { index: 0, key: "count_win_0", name: "Spooky Town" },
+    { index: 1, key: "count_win_1", name: "Rascal's Hideout" },
+    { index: 2, key: "count_win_2", name: "Serenity Peak" },
+    { index: 3, key: "count_win_3", name: "Miner's Mine" },
+    { index: 4, key: "count_win_4", name: "Legendary Arena" },
   ];
 
   // ---------- INTERNAL STATE ----------
