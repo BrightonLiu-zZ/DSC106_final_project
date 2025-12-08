@@ -109,7 +109,7 @@
     if (!key) return 0;
 
     // If we were passed an arena NAME, look up its key
-    if (!/^count_/.test(key)) {
+    if (!/^count_win_/.test(key)) {
       const arenaMeta = ARENA_CONFIG.find((a) => a.name === key);
       key = arenaMeta ? arenaMeta.key : null;
     }
@@ -137,14 +137,14 @@
     if (!key) return 0;
 
     // If we were passed an arena NAME, look up its key (e.g. "count_2")
-    if (!/^count_/.test(key) && !/^rwin_/.test(key)) {
+    if (!/^count_win_/.test(key) && !/^rwin_/.test(key)) {
       const arenaMeta = ARENA_CONFIG.find((a) => a.name === key);
       key = arenaMeta ? arenaMeta.key : null;
     }
     if (!key) return 0;
 
     // Map "count_2" -> "rwin_2"
-    const rKey = key.replace(/^count_/, "rwin_");
+    const rKey = key.replace(/^count_win_/, "rwin_");
     let value = cardRow[rKey];
 
     // If rwin_* is present, use it directly
