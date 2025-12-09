@@ -226,7 +226,7 @@
       .append("div")
       .attr("class", "explorer-bin-title")
       .attr("contenteditable", "true")
-      .text("“Cheap spell” bin");
+      .text("“Fair Card” bin");
 
     spellCol
       .append("div")
