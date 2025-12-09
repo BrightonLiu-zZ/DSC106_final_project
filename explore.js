@@ -448,7 +448,7 @@ function buildChartToggleUI() {
           "class",
           "explorer-button explorer-button--tiny explorer-button--spell"
         )
-        .text(inSpell ? "In cheap bin" : "Add to cheap");
+        .text(inSpell ? "In cheap bin" : "Add to fair");
 
       if (inSpell) {
         spellBtn.attr("disabled", true);
