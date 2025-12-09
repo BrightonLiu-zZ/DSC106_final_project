@@ -226,7 +226,7 @@
       .append("div")
       .attr("class", "explorer-bin-title")
       .attr("contenteditable", "true")
-      .text("“Cheap spell” bin");
+      .text("Fair spell” bin");
 
     spellCol
       .append("div")
@@ -448,7 +448,7 @@ function buildChartToggleUI() {
           "class",
           "explorer-button explorer-button--tiny explorer-button--spell"
         )
-        .text(inSpell ? "In fair bin" : "Add to cheap");
+        .text(inSpell ? "In fair bin" : "Add to fair");
 
       if (inSpell) {
         spellBtn.attr("disabled", true);
