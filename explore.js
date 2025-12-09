@@ -208,7 +208,6 @@
 
     toxicCol
       .append("div")
-      .attr("id", "toxic-bin-title")
       .attr("class", "explorer-bin-title")
       .attr("contenteditable", "true")
       .text("“Toxic troop” bin");
@@ -225,10 +224,9 @@
 
     spellCol
       .append("div")
-      .attr("id", "spell-bin-title")
       .attr("class", "explorer-bin-title")
       .attr("contenteditable", "true")
-      .text("“Fair Card” bin");
+      .text("“Cheap spell” bin");
 
     spellCol
       .append("div")
@@ -271,8 +269,6 @@
     elixirSelect.on("change", handleFilterChange);
     raritySelect.on("change", handleFilterChange);
     typeSelect.on("change", handleFilterChange);
-    d3.select("#toxic-bin-title").on("input", renderWinsChart);
-    d3.select("#spell-bin-title").on("input", renderWinsChart);
   }
 
   // ---------- CHART TOGGLE UI ----------
@@ -452,7 +448,7 @@ function buildChartToggleUI() {
           "class",
           "explorer-button explorer-button--tiny explorer-button--spell"
         )
-        .text(inSpell ? "In fair bin" : "Add to fair");
+        .text(inSpell ? "In fair bin" : "Add to cheap");
 
       if (inSpell) {
         spellBtn.attr("disabled", true);
@@ -703,9 +699,6 @@ function buildChartToggleUI() {
       .attr("class", "axis-label")
       .text("Total Wins");
 
-    const toxicName = d3.select("#toxic-bin-title").text();
-    const spellName = d3.select("#spell-bin-title").text();
-
     const toxicMean = d3.mean(
       data.filter((d) => d.bin === "toxic_troop").map((d) => d.wins)
     );
@@ -731,7 +724,7 @@ function buildChartToggleUI() {
         .attr("y", y(toxicMean) - 4)
         .attr("text-anchor", "end")
         .attr("class", "mean-label mean-label--toxic")
-        .text(`${toxicName} mean`);
+        .text("Toxic troop mean");
     }
 
     if (spellMean != null) {
@@ -749,7 +742,7 @@ function buildChartToggleUI() {
         .attr("y", y(spellMean) - 4)
         .attr("text-anchor", "end")
         .attr("class", "mean-label mean-label--spell")
-        .text(`${spellName} mean`);
+        .text("Cheap spell mean");
     }
 
     // "Zoomed scale: a–b wins" label
