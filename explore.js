@@ -207,11 +207,10 @@
       .attr("class", "explorer-bin explorer-bin--toxic");
 
     toxicCol
-    .append("input")
-    .attr("class", "explorer-bin-title-input")
-    .attr("type", "text")
-    .attr("value", "Toxic troop bin")
-    .attr("id", "toxic-bin-name");
+      .append("div")
+      .attr("class", "explorer-bin-title")
+      .attr("contenteditable", "true")
+      .text("“Toxic troop” bin");
 
     toxicCol
       .append("div")
@@ -224,11 +223,10 @@
       .attr("class", "explorer-bin explorer-bin--spell");
 
     spellCol
-    .append("input")
-    .attr("class", "explorer-bin-title-input")
-    .attr("type", "text")
-    .attr("value", "Cheap spell bin")
-    .attr("id", "spell-bin-name");
+      .append("div")
+      .attr("class", "explorer-bin-title")
+      .attr("contenteditable", "true")
+      .text("“Cheap spell” bin");
 
     spellCol
       .append("div")
