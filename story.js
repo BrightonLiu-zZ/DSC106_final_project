@@ -51,6 +51,7 @@
   }
 
   function handleClickToAdvance(event) {
+    if (event.target.closest("a")) return;
     // Don’t auto-advance when user is interacting with explorer controls
     const explorerSlideEl = document.querySelector(".slide--explorer");
     const isExplorerActive =
@@ -65,7 +66,6 @@
     if (isExplorerActive && (clickedInsideExplorer || clickedNav)) {
       return;
     }
-
     // Otherwise, click anywhere advances (until final slide)
     nextSlide();
   }
