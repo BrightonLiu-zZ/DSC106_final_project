@@ -226,7 +226,7 @@
       .append("div")
       .attr("class", "explorer-bin-title")
       .attr("contenteditable", "true")
-      .text("Fair spell” bin");
+      .text("“Fair spell” bin");
 
     spellCol
       .append("div")
@@ -742,7 +742,7 @@ function buildChartToggleUI() {
         .attr("y", y(spellMean) - 4)
         .attr("text-anchor", "end")
         .attr("class", "mean-label mean-label--spell")
-        .text("Cheap spell mean");
+        .text("Fair spell mean");
     }
 
     // "Zoomed scale: a–b wins" label
@@ -933,7 +933,7 @@ function buildChartToggleUI() {
         .attr("y", y(spellMean) - 4)
         .attr("text-anchor", "end")
         .attr("class", "mean-label mean-label--spell")
-        .text("Cheap spell mean");
+        .text("Fair spell mean");
     }
 
     svg
